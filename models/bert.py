@@ -5,7 +5,7 @@ class AITextDetector(nn.Module):
         '''
            Bert model with a new fully connected layer for text classification
         '''
-        super(AITextDector, self).__init__()
+        super(AITextDetector, self).__init__()
         self.bert = baseModel(name=base_model).pretrained_model()
         self.dropout =  dropout
         self.fc = nn.Sequential(
@@ -27,7 +27,7 @@ class AITextDetector(nn.Module):
     def _init_weights(self):
         """ Initialize the weights """
         for  m in self.fc:
-            if isinstance(m, (nn.Linear)):
+            if isinstance(m, nn.Linear):
                 m.weight.data.normal_(mean=0.0, std=0.02)
         
             if isinstance(m, nn.Linear) and m.bias is not None:
