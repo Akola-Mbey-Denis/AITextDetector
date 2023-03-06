@@ -11,6 +11,7 @@ from tqdm import tqdm
 from models.bert import BertAITextDetector
 from models.roberta_model import RobertaAITextDetector
 from models.gpt import GPTAITextDetector
+from models.xlm import XLMRobertaAITextDetector
 import argparse
 import yaml
 from utils.dataloader import AITextDataset
@@ -28,7 +29,7 @@ def parse_args():
     parser.add_argument('--max_length', type=int, default=128,
                         help='Maximum length')
     parser.add_argument('--arch', type=str, default='bert',
-                        help='Specify the arch type : bert/roberta/gpt')
+                        help='Specify the arch type : bert/roberta/gpt/xlm')
     
     parser.add_argument('--valid_split', type=float, default=0.1=20,
                         help='Specify the dataset type : train/test')
@@ -61,7 +62,9 @@ elif arch =='roberta':
     model = RobertaAITextDetector(dropout =args['DROPOUT'])
     print(model)
 elif arch == 'gpt':
-    model = GPTAITextDetector(dropout =args['DROPOUT'])        
+    model = GPTAITextDetector(dropout =args['DROPOUT'])
+elif arch == 'xlm':
+    model = XLMRobertaAITextDetector(dropout = args['DROPOUT'])      
 
 
 # move model to the right device
@@ -69,13 +72,16 @@ model.to(device)
 if arch =='bert':
     tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
 elif arch =='roberta':
-    tokenizer =transformers.RobertaTokenizer.from_pretrained("roberta-base")
+    tokenizer = transformers.RobertaTokenizer.from_pretrained("roberta-base")
 elif arch =='gpt':
     # Get model's tokenizer.
     tokenizer = transformers.GPT2Tokenizer.from_pretrained("gpt2")
     tokenizer.add_special_tokens({"cls_token": "[CLS]"})
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
     model.base.resize_token_embeddings(len(tokenizer))   
+elif arch == 'xlm':
+    tokenizer = transformers.AutoTokenizer.from_pretrained("xlm-roberta-base")
+
 dataset = AITextDataset(tokenizer =tokenizer, max_length = max_length, data_type = dataset_type,model_type =arch,file_path =args['PATH'])
 
 dataset_size = len(dataset)
@@ -150,8 +156,10 @@ def training_loop(epochs,dataloader,val_dataloader,model,loss_fn,optimizer,sched
             label = label.type_as(output)
 
             loss = loss_fn(output,label)
+
             # back propagate
             loss.backward()  
+
             # Clip the norm of the gradients to 1.0 to prevent "exploding gradients"
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)          
             optimizer.step()
@@ -163,8 +171,6 @@ def training_loop(epochs,dataloader,val_dataloader,model,loss_fn,optimizer,sched
             
             # compute accuracy per batch
             num_correct+= sum(1 for a, b in zip(pred, label) if a[0] == b[0]) 
-              
-          
             total_loss+= loss.item() 
             scheduler.step()
         print(f'Training loss :{round(float(total_loss/len(dataloader)),3)}   with accuracy {round(float(100 * num_correct /target_count),3)}%')
@@ -179,7 +185,8 @@ def training_loop(epochs,dataloader,val_dataloader,model,loss_fn,optimizer,sched
     return model
 
 # construct an optimizer
-optimizer = AdamW(model.parameters(), lr=2e-4,eps = 1e-08)
+# inspired by https://arxiv.org/pdf/1810.04805.pdf
+optimizer = AdamW(model.parameters(), lr=2e-5,eps = 1e-08)
 
 # Set up the learning rate scheduler
 total_steps = len(train_dataloader) * epochs
