@@ -1,19 +1,16 @@
 import transformers
 import torch.nn as nn
-class AITextDetector(nn.Module):
+class BertAITextDetector(nn.Module):
     def __init__(self,dropout= 0.20, base_model ='bert-base'):
         '''
            Bert model with a new fully connected layer for text classification
         '''
-        super(AITextDetector, self).__init__()
+        super(BertAITextDetector, self).__init__()
         self.bert = baseModel(name=base_model).pretrained_model()
         self.dropout =  dropout
         self.fc = nn.Sequential(
-          nn.Linear(768,512),
-          nn.LayerNorm(512),
-          nn.ReLU(),
-          nn.Dropout(p = self.dropout),        
-          nn.Linear(512,1)
+            nn.Dropout(p = self.dropout),        
+            nn.Linear(768,1)
         )
         self._init_weights()
         

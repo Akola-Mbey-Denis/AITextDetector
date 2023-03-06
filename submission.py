@@ -1,6 +1,7 @@
 import csv
 from models.bert import AITextDetector
 from models.roberta_model import RobertaAITextDetector
+from models.gpt import GPTAITextDetector
 from utils.dataloader import AITextDataset
 from tqdm import tqdm
 import transformers
@@ -21,7 +22,7 @@ def parse_args():
     parser.add_argument('--max_length', type=int, default=128,
                         help='Maximum length')
     parser.add_argument('--arch', type=str, default='bert',
-                        help='Specify the arch type : bert/roberta')
+                        help='Specify the arch type : bert/roberta/gpt')
 
     return parser.parse_args()
 
@@ -40,22 +41,34 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 
 if arch =='bert':
     tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
-else:
+elif arch =='roberta':
     tokenizer =transformers.RobertaTokenizer.from_pretrained("roberta-base")
+elif arch =='gpt':
+    # Get model's tokenizer.
+    tokenizer = transformers.GPT2Tokenizer.from_pretrained("gpt2")
+    tokenizer.add_special_tokens({"cls_token": "[CLS]"})
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    model.base.resize_token_embeddings(len(tokenizer)) 
+
+   
 if arch =='bert':
     model = AITextDetector()
-else:
+elif arch == 'roberta':
     model = RobertaAITextDetector()
+elif arch  == 'gpt':
+    model =  GPTAITextDetector()
+    model.base.resize_token_embeddings(len(tokenizer))
+    model.base.config.pad_token_id = model.base.config.eos_token_id
 
 
-dataset = AITextDataset(tokenizer =tokenizer, max_length = max_length, data_type = dataset_type,model_type=arch, file_path =args['PATH'])
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=args['BATCH_SIZE'], shuffle=False,collate_fn=dataset.collate_fn_test)
-model.load_state_dict(torch.load('new_batch/ai-text-classifier-79.0.pth'))
+dataset = AITextDataset(tokenizer = tokenizer, max_length = max_length, data_type = dataset_type, model_type = arch, file_path = args['PATH'])
+dataloader = torch.utils.data.DataLoader(dataset, batch_size = args['BATCH_SIZE'], shuffle = False, collate_fn = dataset.collate_fn_test)
+model.load_state_dict(torch.load('start/ai-text-classifier-80.0.pth'))
 model.eval()
 model.to(device)
-# _  = validation_loop(dataloader,model)
+
 with torch.no_grad():
-    with open("submission-16.csv", "w") as file:
+    with open("submission-new.csv", "w") as file:
         csv_out = csv.writer(file)
         csv_out.writerow(['id','label'])
         loop=tqdm(enumerate(dataloader),leave=False,total=len(dataloader))

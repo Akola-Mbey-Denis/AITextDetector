@@ -10,10 +10,8 @@ class GPTAITextDetector(nn.Module):
         self.dropout_rate = dropout 
         self.base =  GPT2Model.from_pretrained('gpt2')
         self.fc = nn.Sequential(
-            nn.Dropout(self.dropout_rate),
             nn.Linear(768,64),
-            nn.LayerNorm(64),
-            nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(64,1)
         )
         self._init_weights()       

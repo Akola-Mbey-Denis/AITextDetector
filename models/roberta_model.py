@@ -6,13 +6,11 @@ class RobertaAITextDetector(nn.Module):
            Roberta model with new fully connected layer for text classification
         '''
         super(RobertaAITextDetector, self).__init__()    
-        self.dropout_rate =dropout    
+        self.dropout_rate = dropout    
         self.bert = transformers.RobertaModel.from_pretrained('roberta-base')
-        self.fc =nn.Sequential(
-            nn.Dropout(self.dropout_rate),
+        self.fc = nn.Sequential(
             nn.Linear(768,64),
-            nn.LayerNorm(64),
-            nn.Dropout(self.dropout_rate),
+            nn.ReLU(),
             nn.Linear(64,1)
         )
         self._init_weights()       
