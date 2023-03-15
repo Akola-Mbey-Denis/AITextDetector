@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import transformers
 import torch
+import time
 import torch.nn as nn
 from torch.utils.data import DataLoader,Subset
 import torch.nn.functional as F
@@ -11,7 +12,6 @@ from tqdm import tqdm
 from models.bert import BertAITextDetector
 from models.roberta_model import RobertaAITextDetector
 from models.gpt import GPTAITextDetector
-from models.xlm import XLMRobertaAITextDetector
 import argparse
 import yaml
 from utils.dataloader import AITextDataset
@@ -22,7 +22,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cfg', type=str, default='config/train.cfg',
                         help='config file. see readme')
-    parser.add_argument('--epochs', type=int, default=5,
+    parser.add_argument('--epochs', type=int, default = 50,
                         help='Number of training epochs')
     parser.add_argument('--data', type=str, default='train',
                         help='Specify the dataset type : train/test')
@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--arch', type=str, default='bert',
                         help='Specify the arch type : bert/roberta/gpt/xlm')
     
-    parser.add_argument('--valid_split', type=float, default=0.1=20,
+    parser.add_argument('--valid_split', type=float, default=0.20,
                         help='Specify the dataset type : train/test')
 
     return parser.parse_args()
@@ -63,8 +63,15 @@ elif arch =='roberta':
     print(model)
 elif arch == 'gpt':
     model = GPTAITextDetector(dropout =args['DROPOUT'])
-elif arch == 'xlm':
-    model = XLMRobertaAITextDetector(dropout = args['DROPOUT'])      
+
+
+# Fine tune only fc layer
+if arch!='gpt':
+    for param in model.bert.parameters():
+        param.requires_grad = False
+else:
+    for param in model.base.parameters():
+        param.requires_grad = False     
 
 
 # move model to the right device
@@ -172,21 +179,21 @@ def training_loop(epochs,dataloader,val_dataloader,model,loss_fn,optimizer,sched
             # compute accuracy per batch
             num_correct+= sum(1 for a, b in zip(pred, label) if a[0] == b[0]) 
             total_loss+= loss.item() 
-            scheduler.step()
+        scheduler.step()
         print(f'Training loss :{round(float(total_loss/len(dataloader)),3)}   with accuracy {round(float(100 * num_correct /target_count),3)}%')
-        if epoch%1 == 0:
+        if epoch%5 == 0:
            val_acc = validation_loop(val_dataloader,model,loss_fn)   
            # Show progress while training
            loop.set_description(f'Epochs={epoch}/{epochs}')
            # saved model 
-           torch.save(model.state_dict(), 'robert/ai-text-classifier-'+str(val_acc)+'.pth')
+           torch.save(model.state_dict(), 'fc_bert/ai-text-classifier-'+str(val_acc)+'.pth')
             
 
     return model
 
 # construct an optimizer
 # inspired by https://arxiv.org/pdf/1810.04805.pdf
-optimizer = AdamW(model.parameters(), lr=2e-5,eps = 1e-08)
+optimizer = AdamW(model.parameters(), lr=1e-4,eps = 1e-08)
 
 # Set up the learning rate scheduler
 total_steps = len(train_dataloader) * epochs
@@ -195,9 +202,10 @@ scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_training_steps=total_steps)
 loss_fn = nn.BCEWithLogitsLoss()
 
+training_start_time = time.time()
 model = training_loop(epochs, train_dataloader,val_dataloader, model, loss_fn, optimizer,scheduler)
-
-torch.save(model.state_dict(), 'robert/ai-text-'+arch+str(epochs)+'-classifier-max-length-'+str(max_length)+'.pth')
+print('Training finished, took {:.2f}s'.format(time.time() - training_start_time))
+torch.save(model.state_dict(), 'fc_bert/ai-text-'+arch+str(epochs)+'-classifier-max-length-'+str(max_length)+'.pth')
 
 
 

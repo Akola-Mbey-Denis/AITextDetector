@@ -68,7 +68,7 @@ model.eval()
 model.to(device)
 
 with torch.no_grad():
-    with open("submission-new.csv", "w") as file:
+    with open("submission.csv", "w") as file:
         csv_out = csv.writer(file)
         csv_out.writerow(['id','label'])
         loop=tqdm(enumerate(dataloader),leave=False,total=len(dataloader))

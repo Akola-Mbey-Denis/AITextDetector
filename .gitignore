@@ -5,6 +5,7 @@ new_train/
 saved_models/
 *.csv
 *.pth
+*.json
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 
