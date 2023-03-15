@@ -28,7 +28,7 @@ Custom dataset with text and its associated labels.
  - Demo_AI_Text_Classification.ipynb files : script for finetuning Bert, RoBERTa and GPT-2
  - doc_2_vec-model.ipynb :  Doc2Vec model
  - transfer-learning-demo.ipynb : script for transfer learning with BERT,RoBERTa, and GPT-2
- train.py : transfering learning with tunable parameters: epochs,max_length, validation split.
+ train.py : transfer learning with tunable parameters: epochs,max_length, validation split.
  - submission.py : Script for making inference on the test data set.
 
 
