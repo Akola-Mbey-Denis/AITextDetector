@@ -1,7 +1,8 @@
 # INF582-2023 Challenge: Human Text vs. AI Text
 # Ecole Polytechnique Fall 2023
 
-
+# Project description
+[Project description](IN582_2023_Challenge.pdf)
 Text Classification task.
 
 ## Data
